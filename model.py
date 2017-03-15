@@ -5,11 +5,15 @@ from torch.autograd import Variable
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
 
-    def __init__(self, rnn_type, ntoken, ninp, nhid, nlayers):
+    def __init__(self, rnn_type, ntoken, ninp, nhid, nlayers, dropout=0.5, tie_weights=False):
         super(RNNModel, self).__init__()
+        self.drop = nn.Dropout(dropout)
         self.encoder = nn.Embedding(ntoken, ninp)
         self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, bias=False)
         self.decoder = nn.Linear(nhid, ntoken)
+
+        if tie_weights:
+            self.decoder.weight = self.encoder.weight
 
         self.init_weights()
 
