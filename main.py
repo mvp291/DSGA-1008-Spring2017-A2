@@ -39,8 +39,14 @@ parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
-parser.add_argument('--save', type=str,  default='model.pt',
+parser.add_argument('--save', type=str, default='model.pt',
                     help='path to save the final model')
+parser.add_argument('--save-dict', type=str, default='word_dict.pkl',
+                    help='path to save the training word dictonary')
+parser.add_argument('--load-dict', type=str, default=None,
+                    help='path to load the training word dictonary from')
+parser.add_argument('--vocab-size', type=int, default=10000,
+                    help='Number of most frequent words to keep in dictionary')
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -50,7 +56,13 @@ torch.manual_seed(args.seed)
 # Load data
 ###############################################################################
 
-corpus = data.Corpus(args.data)
+if args.load_dict:
+    corpus = data.Corpus(args.data, args.vocab_size, "{}/{}".format(args.data, args.load_dict))
+else:
+    corpus = data.Corpus(args.data, args.vocab_size)
+
+if args.save_dict:
+    corpus.save_dictionary("{}/{}".format(args.data, args.save_dict))
 
 def batchify(data, bsz):
     nbatch = data.size(0) // bsz
