@@ -31,11 +31,12 @@ class Corpus(object):
             self.dictionary = Dictionary()
         else:
             self.load_dictionary(dict_path)
-            if vocabulary_size:
-                # If vocabulary size is given, update word idx match according to
-                # given vocabulary size
-                self.dictionary.vocabulary_size = vocabulary_size
-                self.dictionary.update_match()
+
+        if vocabulary_size:
+            # If vocabulary size is given, update word idx match according to
+            # given vocabulary size
+            self.dictionary.vocabulary_size = vocabulary_size
+            self.dictionary.update_match()
 
         self.train = self.tokenize(os.path.join(path, 'train.txt'))
         self.valid = self.tokenize(os.path.join(path, 'valid.txt'))
