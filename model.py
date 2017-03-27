@@ -9,7 +9,7 @@ class RNNModel(nn.Module):
         super(RNNModel, self).__init__()
         self.drop = nn.Dropout(dropout)
         self.encoder = nn.Embedding(ntoken, ninp)
-        self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, bias=False)
+        self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, bias=True, dropout=dropout)
         self.decoder = nn.Linear(nhid, ntoken)
 
         if tie_weights:
@@ -24,6 +24,13 @@ class RNNModel(nn.Module):
     def init_weights(self):
         initrange = 0.1
         self.encoder.weight.data.uniform_(-initrange, initrange)
+
+        for weight_attr in self.rnn.state_dict().keys():
+            if 'bias' in weight_attr:
+                getattr(self.rnn, weight_attr).data.fill_(0)
+            else:
+                getattr(self.rnn, weight_attr).data.uniform_(-initrange, initrange)
+
         self.decoder.bias.data.fill_(0)
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
