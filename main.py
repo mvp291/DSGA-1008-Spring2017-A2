@@ -29,7 +29,7 @@ parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='batch size')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
-parser.add_argument('--dropout', type=float, default=0.2,
+parser.add_argument('--dropout', type=float, default=0.0,
                     help='dropout applied to layers (0 = no dropout)')
 parser.add_argument('--tied', action='store_true',
                     help='tie the word embedding and softmax weights')
@@ -118,6 +118,7 @@ def get_batch(source, i, evaluation=False):
 
 
 def evaluate(data_source):
+    model.eval()
     total_loss = 0
     ntokens = len(corpus.dictionary)
     hidden = model.init_hidden(eval_batch_size)
@@ -131,6 +132,7 @@ def evaluate(data_source):
 
 
 def train():
+    model.train()
     total_loss = 0
     start_time = time.time()
     ntokens = len(corpus.dictionary)
