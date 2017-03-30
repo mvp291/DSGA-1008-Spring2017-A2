@@ -2,6 +2,23 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
+# W(weight_ih) se inicializa con norm, U(weight_hh) se inicializa con orto
+def ortho_weight(ndim):
+    W = numpy.random.randn(ndim, ndim)
+    u, s, v = numpy.linalg.svd(W)
+    return u
+
+
+def norm_weight(nin,nout=None, scale=0.01, ortho=True):
+    if nout is None:
+        nout = nin
+    if nout == nin and ortho:
+        W = ortho_weight(nin)
+    else:
+        W = scale * numpy.random.randn(nin, nout)
+    return W
+
+
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
 
