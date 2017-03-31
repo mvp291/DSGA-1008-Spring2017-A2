@@ -1,12 +1,14 @@
+import numpy as np
 import argparse
 import time
 import math
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+import torch.optim as optim
 
 import data
-import model
+import Model
 
 parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Language Model')
 parser.add_argument('--data', type=str, default='./data/penn',
@@ -29,7 +31,7 @@ parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='batch size')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
-parser.add_argument('--dropout', type=float, default=0.0,
+parser.add_argument('--dropout', type=float, default=0.2,
                     help='dropout applied to layers (0 = no dropout)')
 parser.add_argument('--tied', action='store_true',
                     help='tie the word embedding and softmax weights')
@@ -47,6 +49,9 @@ parser.add_argument('--load-dict', type=str, default=None,
                     help='path to load the training word dictonary from')
 parser.add_argument('--vocab-size', type=int, default=10000,
                     help='Number of most frequent words to keep in dictionary')
+parser.add_argument('--randomize-input', action='store_true',
+                    help='Randomize dataset for each epoch')
+
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -116,6 +121,15 @@ def get_batch(source, i, evaluation=False):
     target = Variable(source[i+1:i+1+seq_len].view(-1))
     return data, target
 
+def shuffle_dataset(data):
+    n = data.size()[0]
+    permutation = torch.randperm(n)
+    if args.cuda:
+        permutation = permutation.cuda()
+
+    data = data.index_select(0, permutation)
+    return data
+
 
 def evaluate(data_source):
     model.eval()
@@ -137,7 +151,12 @@ def train():
     start_time = time.time()
     ntokens = len(corpus.dictionary)
     hidden = model.init_hidden(args.batch_size)
-    for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+
+    iteration_order = range(0, train_data.size(0) - 1, args.bptt)
+    if args.randomize_input:
+        iteration_order = np.random.permutation(iteration_order)
+
+    for batch, i in enumerate(iteration_order):
         data, targets = get_batch(train_data, i)
         hidden = repackage_hidden(hidden)
         model.zero_grad()
@@ -145,9 +164,11 @@ def train():
         loss = criterion(output.view(-1, ntokens), targets)
         loss.backward()
 
-        clipped_lr = lr * clip_gradient(model, args.clip)
-        for p in model.parameters():
-            p.data.add_(-clipped_lr, p.grad.data)
+        torch.nn.utils.clip_grad_norm(model.parameters(), args.clip)
+        #clipped_lr = lr * clip_gradient(model, args.clip)
+        #for p in model.parameters():
+        #    p.data.add_(-clipped_lr, p.grad.data)
+        optimizer.step()
 
         total_loss += loss.data
 
@@ -165,8 +186,10 @@ def train():
 # Loop over epochs.
 lr = args.lr
 prev_val_loss = None
+optimizer = optim.SGD(model.parameters(), lr)
 for epoch in range(1, args.epochs+1):
     epoch_start_time = time.time()
+    
     train()
     val_loss = evaluate(val_data)
     print('-' * 89)
@@ -177,6 +200,7 @@ for epoch in range(1, args.epochs+1):
     # Anneal the learning rate.
     if prev_val_loss and val_loss > prev_val_loss:
         lr /= 4.
+        optimizer = optim.Adadelta(model.parameters(), lr)
     prev_val_loss = val_loss
 
 

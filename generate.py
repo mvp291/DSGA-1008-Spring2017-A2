@@ -59,16 +59,16 @@ corpus = data.Corpus(args.data)
 ntokens = len(corpus.dictionary)
 print 'vocab size: ', ntokens
 hidden = model.init_hidden(1)
-input = Variable(torch.rand(1, 1).mul(ntokens).long(), volatile=True)
+inp = Variable(torch.rand(1, 1).mul(ntokens).long(), volatile=True)
 if args.cuda:
-    input.data = input.data.cuda()
+    inp.data = inp.data.cuda()
 
 with open(args.outf, 'w') as outf:
     for i in range(args.words):
-        output, hidden = model(input, hidden)
+        output, hidden = model(inp, hidden)
         word_weights = output.squeeze().data.div(args.temperature).exp().cpu()
         word_idx = torch.multinomial(word_weights, 1)[0]
-        input.data.fill_(word_idx)
+        inp.data.fill_(word_idx)
         word = corpus.dictionary.idx2word[word_idx]
 
         outf.write(word + ('\n' if i % 20 == 19 else ' '))
