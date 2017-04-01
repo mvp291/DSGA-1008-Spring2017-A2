@@ -54,6 +54,8 @@ parser.add_argument('--randomize-input', action='store_true',
 
 args = parser.parse_args()
 
+print('args', args)
+
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
 
@@ -61,6 +63,7 @@ torch.manual_seed(args.seed)
 # Load data
 ###############################################################################
 
+print('Loading data')
 if args.load_dict:
     corpus = data.Corpus(args.data, args.vocab_size, "{}/{}".format(args.data, args.load_dict))
 else:
@@ -68,6 +71,8 @@ else:
 
 if args.save_dict:
     corpus.save_dictionary("{}/{}".format(args.data, args.save_dict))
+
+print('Using vocabulary size of {}'.format(len(corpus.dictionary)))
 
 def batchify(data, bsz):
     nbatch = data.size(0) // bsz
@@ -96,6 +101,16 @@ criterion = nn.CrossEntropyLoss()
 ###############################################################################
 # Training code
 ###############################################################################
+
+def clip_gradient(model, clip):
+    """Computes a gradient clipping coefficient based on gradient norm."""
+    totalnorm = 0
+    for p in model.parameters():
+        modulenorm = p.grad.data.norm()
+        totalnorm += modulenorm ** 2
+    totalnorm = math.sqrt(totalnorm)
+    return min(1, args.clip / (totalnorm + 1e-6))
+
 
 def repackage_hidden(h):
     """Wraps hidden states in new Variables, to detach them from their history."""
