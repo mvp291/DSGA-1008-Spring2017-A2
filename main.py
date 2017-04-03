@@ -55,6 +55,8 @@ parser.add_argument('--randomize-input', action='store_true',
 
 args = parser.parse_args()
 
+print('args', args)
+
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
 
@@ -62,6 +64,7 @@ torch.manual_seed(args.seed)
 # Load data
 ###############################################################################
 
+print('Loading data')
 if args.load_dict:
     corpus = data.Corpus(args.data, args.vocab_size, "{}/{}".format(args.data, args.load_dict))
 else:
@@ -69,6 +72,8 @@ else:
 
 if args.save_dict:
     corpus.save_dictionary("{}/{}".format(args.data, args.save_dict))
+
+print('Using vocabulary size of {}'.format(len(corpus.dictionary)))
 
 def batchify(data, bsz):
     nbatch = data.size(0) // bsz
@@ -166,9 +171,6 @@ def train():
         loss.backward()
 
         torch.nn.utils.clip_grad_norm(model.parameters(), args.clip)
-        #clipped_lr = lr * clip_gradient(model, args.clip)
-        #for p in model.parameters():
-        #    p.data.add_(-clipped_lr, p.grad.data)
         optimizer.step()
 
         total_loss += loss.data
@@ -212,7 +214,7 @@ for epoch in range(1, args.epochs+1):
     # Anneal the learning rate.
     if prev_val_loss and val_loss > prev_val_loss:
         lr /= 4.
-        optimizer = optim.Adam(model.parameters(), lr)
+        optimizer = optim.SGD(model.parameters(), lr)
     prev_val_loss = val_loss
 
 
