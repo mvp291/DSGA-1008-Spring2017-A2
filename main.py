@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
+import pickle as pkl
 
 import data
 import Model
@@ -50,7 +51,7 @@ parser.add_argument('--load-dict', type=str, default=None,
 parser.add_argument('--vocab-size', type=int, default=10000,
                     help='Number of most frequent words to keep in dictionary')
 parser.add_argument('--randomize-input', action='store_true',
-                    help='Randomize dataset for each epoch')
+                     help='Randomize dataset for each epoch')
 
 args = parser.parse_args()
 
@@ -182,25 +183,36 @@ def train():
             total_loss = 0
             start_time = time.time()
 
+    return cur_loss, math.exp(cur_loss)
+
+train_l = []
+train_p = []
+val_l = []
+val_p = []
 
 # Loop over epochs.
 lr = args.lr
 prev_val_loss = None
-optimizer = optim.SGD(model.parameters(), lr)
+optimizer = optim.Adam(model.parameters(), lr)
 for epoch in range(1, args.epochs+1):
     epoch_start_time = time.time()
     
-    train()
+    train_loss, train_perp = train()
+    train_l.append(train_loss)
+    train_p.append(train_perp)
     val_loss = evaluate(val_data)
+
     print('-' * 89)
     print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
             'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
                                        val_loss, math.exp(val_loss)))
+    val_l.append(val_loss)
+    val_p.append(math.exp(val_loss))
     print('-' * 89)
     # Anneal the learning rate.
     if prev_val_loss and val_loss > prev_val_loss:
         lr /= 4.
-        optimizer = optim.Adadelta(model.parameters(), lr)
+        optimizer = optim.Adam(model.parameters(), lr)
     prev_val_loss = val_loss
 
 
@@ -213,3 +225,6 @@ print('=' * 89)
 if args.save != '':
     with open(args.save, 'wb') as f:
         torch.save(model, f)
+
+with open('./losses_adam.pkl', 'wb') as df:
+    pkl.dump({'train_l':train_l, 'train_p':train_p, 'val_l':val_l, 'val_p':val_p}, df)
